@@ -1,3 +1,5 @@
+## Sesión 3
+
 **Actividad 3.1** 
 
     Consulta de las estadísticas del sistema
