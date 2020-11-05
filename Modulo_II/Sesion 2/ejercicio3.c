@@ -29,7 +29,7 @@ El tamaño total ocupado por dichos archivos es 2345674 bytes*/
 #include<string.h>
 #include<dirent.h>
 
-void busquedaRecursiva(char* pathname, int *cantidad, int *tamanio)
+int busquedaRecursiva(char* pathname, int *cantidad, int *tamanio)
 {
     DIR *directorio;
     struct dirent *entrada;
@@ -73,6 +73,7 @@ void busquedaRecursiva(char* pathname, int *cantidad, int *tamanio)
     }
 
     closedir(directorio);
+    return 0;
 }
 
 
@@ -81,7 +82,7 @@ int main(int argc, char *argv[])
     char* pathname;
     int cantidad=0, tamanio=0;
 
-    if(argc != 2)
+    if(argc == 2)
     {
         pathname = argv[1];
 	}
