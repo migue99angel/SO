@@ -117,6 +117,31 @@ En el proceso padre cerramos el descriptor de escritura, ya que solo vamos a lee
 ### Actividad 3
 Este ejercicio consiste en imitar ls | sort mediante la redirección de la entrada y salida estándar
 
-![Ejercicio2](CodigoEjercicio3_S4.jpeg)
+![Ejercicio3](CodigoEjercicio3_S4.jpeg)
 
-![Ejercicio2](EjecucionEjercicio3_S4.jpeg)
+![Ejercicio3](EjecucionEjercicio3_S4.jpeg)
+
+
+### Actividad 4
+Es igual que el ejercicio anterior, la salida es la misma, solo cambia la llamada al sistema dup por la llamada al sistema dup2
+
+![Ejercicio4](CodigoEjercicio4_S4.jpeg)
+
+![Ejercicio4](EjecucionEjercicio4_S4.jpeg)
+
+Para entender correctamente el funcionamiento de dup he leído esto: http://systemadmin.es/2010/05/como-funcionan-las-llamadas-al-sistema-dup-open-close
+
+### Actividad 5
+
+La imagen se ve muy pequeña, en la carpeta Sesión 4 se encuentran todos los códigos utilizados comentados adecuadamente.
+
+En este ejercicio el principal problema que he encontrado ha sido al redireccionar la entrada y salida de los procesos para que los esclavos escriban en el pipe y el maestro lea del mismo
+
+
+![Ejercicio5](CodigoMaestro_S4.jpeg)
+
+![Ejercicio5](CodigoEsclavo_S4.jpeg)
+
+
+Es parte de la ejecución ya que no cabía en una imagen
+![Ejercicio5](EjecucionEjercicio5_S4.jpeg)
