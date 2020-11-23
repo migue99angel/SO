@@ -66,6 +66,10 @@ int main(int argc, char *argv[])
             //En el primer esclavo cierro los descriptores de archivo del segundo esclavo
             close(fdSegundaMitad[0]);
             close(fdSegundaMitad[1]);
+            //Cierro el descriptor de Lectura, ya que no vamos a leer del cauce
+            close(fdPrimeraMitad[0]);
+            //Duplico el descriptor de escritura en cauce en el descriptor correspondiente a la salida estándar, cerrado previamente por la misma llamada al sistema dup2
+            dup2(fdPrimeraMitad[1],STDOUT_FILENO);
         }
         else
         {
@@ -80,6 +84,10 @@ int main(int argc, char *argv[])
                 //En el segundo esclavo cierro los descriptores de archivo del primer esclavo
                 close(fdPrimeraMitad[0]);
                 close(fdPrimeraMitad[1]);
+                //Cierro el descriptor de Lectura, ya que no vamos a leer del cauce
+                close(fdSegundaMitad[0]);
+                //Duplico el descriptor de escritura en cauce en el descriptor correspondiente a la salida estándar, cerrado previamente por la misma llamada al sistema dup2
+                dup2(fdSegundaMitad[1],STDOUT_FILENO);
             }
         }
 
@@ -90,7 +98,7 @@ int main(int argc, char *argv[])
 
         //Ejecuto el ejecutable resultante al compilar el programa esclavo.c, 
         //es necesario que esté en el mismo directorio que el ejecutable resultante a compilar maestro.c
-        if((execl("./esclavo","esclavo",arg1,arg2,arg3,arg4,NULL)) < 0 )
+        if((execl("./esclavo","esclavo",arg1,arg2,NULL)) < 0 )
         {
             perror("\nError en el execv");
             printf("\nError %d en exec",errno);	
