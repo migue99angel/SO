@@ -13,8 +13,6 @@ int main(int argc, char *argv[])
     int extremoInferior, extremoSuperior;
     char* arg1;
     char* arg2;
-    char* arg3;
-    char* arg4;
     int fdPrimeraMitad[2], fdSegundaMitad[2];
     int bytesLeidos;
 
@@ -52,16 +50,10 @@ int main(int argc, char *argv[])
         //Reservo memoria para los argumentos
         arg1 = (char *)(malloc (sizeof(int)));
         arg2 = (char *)(malloc (sizeof(int)));
-        arg3 = (char *)(malloc (sizeof(int)));
-        arg4 = (char *)(malloc (sizeof(int)));
 
         if(i == 1)
         {
             extremoSuperior = (extremoInferior+extremoSuperior)/2;
-
-            //Paso los descriptores de archivo a *char que es lo que requiere execl
-            sprintf (arg3, "%d", fdPrimeraMitad[0]);
-            sprintf (arg4, "%d", fdPrimeraMitad[1]);
 
             //En el primer esclavo cierro los descriptores de archivo del segundo esclavo
             close(fdSegundaMitad[0]);
@@ -76,10 +68,6 @@ int main(int argc, char *argv[])
             if(i == 2)
             {
                 extremoInferior = ((extremoInferior+extremoSuperior)/2) + 1;
-
-                //Paso los descriptores de archivo a *char que es lo que requiere execl
-                sprintf (arg3, "%d", fdSegundaMitad[0]);
-                sprintf (arg4, "%d", fdSegundaMitad[1]);
 
                 //En el segundo esclavo cierro los descriptores de archivo del primer esclavo
                 close(fdPrimeraMitad[0]);
