@@ -189,3 +189,18 @@ Para este ejercicio he cogido el programa de recibo del ejercicio anterior, y le
 
 ![Ejercicio2](CodigoEjercicio2_S5.jpeg)
 ![Ejercicio2](EjecucionEjercicio2_S5.jpeg)
+
+
+### Actividad 3
+
+
+![Ejercicio3](CodigoEjercicio3_S5.jpeg)
+![Ejercicio3](EjecucionEjercicio3_S5.jpeg)
+
+
+### Actividad 4
+
+Este ejercicio bloquea las señales SIGTERM durante 10 segundos, el objetivo es ver que cuando las señales se desbloquean, el proceso las gestiona.
+
+![Ejercicio3](CodigoEjercicio4_S5.jpeg)
+![Ejercicio3](EjecucionEjercicio4_S5.jpeg)
