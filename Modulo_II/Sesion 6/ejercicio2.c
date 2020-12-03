@@ -65,14 +65,6 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
         }
-        else
-        {
-            printf("Empiezo a esperar\n");
-            if((waitpid(pid,&estado,0)) == -1)
-                perror("Error en llamada a waitpid");
-
-            printf("Termino de esperar\n");
-        }
         
         if((pid=fork()) < 0)
         {
@@ -98,11 +90,6 @@ int main(int argc, char *argv[])
                 printf("\nError %d en execv",errno);	
                 exit(EXIT_FAILURE);
             }
-        }
-        else
-        {
-            if((waitpid(pid,&estado,0)) == -1)
-                perror("Error en llamada a waitpid");
         }
 
     }

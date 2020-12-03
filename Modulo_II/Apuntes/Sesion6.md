@@ -54,6 +54,10 @@ Normalmente lo que haremos será obtener las banderas con F_GETFL, operaremos co
 
 
 
+![Ejercicio2](CodigoEjercicio2_S6.jpeg)
+![Ejercicio2](EjecucionEjercicio2_S6.jpeg)
+
+
 **La función fcntl y el bloqueo de archivos**
 
 Es evidente que el acceso de varios procesos a un archivo para leer/escribir puede producir condiciones de carrera. Para evitarlas debemos sincronizar las acciones de éstos. Si bien podríamos pensar en utilizar semáforos, el uso de cerrojos de archivos es más corriente debido a que el kernel asocia automáticamente los cerrojos con archivos. Tenermos dos APIs para manejar cerrojos de archivos: 
