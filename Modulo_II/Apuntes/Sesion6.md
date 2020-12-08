@@ -98,6 +98,8 @@ Para utilizar **fcntl()** en un bloqueo de archivos necesitamos utilzar una estr
         ...
     };
 
+Más información aquí: http://manpages.ubuntu.com/manpages/bionic/es/man2/fcntl.2.html
+
 Si queremos situar un cerrojo de lectura en un archivo, el archivo debe abrirse en modo lectura. De modo similar, si el cerrojo es de escritura, el archivo se abrirá en modo escritura. Para ambos tipos de cerrojos, el archivo debe abrirse en modo lectura/escritura. Si usamos un modo incompatible con el modo de apertura del archivo obtendremos el error **EBADF**.
 
 El conjunto de campos l_whence, l_strart y l_len especifican el rango de bytes que deseamos bloquear
@@ -173,3 +175,108 @@ Por convención, los demonios escriben su propio identificador en el archivo de 
 
 ![Ejercicio4](CodigoEjercicio4_S6.jpeg)
 ![Ejercicio4](EjecucionEjercicio4_S6.jpeg)
+
+**Archivos proyectados en memoria con mmap**
+
+Un archivo proyectado en memoria es una técnica que utilizan los sistemas operativos actuales para acceder a archivos. En lugar de una lectura "tradicional" lo que se hace es crear una nueva región de memoria en eñ espacio de direcciones del proceso del tamaño de la zona a acceder del archivo (una parte o todo el archivo) y cargar en ella el contenido de esa parte del archivo. Las páginas de la proyección son (automáticamente) cargadas del archivo cuando sean necesarias.
+
+La función **mmap()** proyecta bien un archivo bien un objeto memoria compartida en el espacio de direcciones del proceso. Podemos usarla para tres propósitos:
+
+- Con un archivo regular para suministrar E/S proyectadas en memoria (lo que estudiaremos en este apartado)
+- Con archivos especiales para suministrar proyecciones anónimas
+- Con **shm_open** para compartir memoria entre procesos no relacionados.
+
+
+        #include <sys/mman.h>
+
+        caddr_t mmap(void *start, size_t length, int prot , int flags, int fd, off_t offset);
+
+El primer argumento de la función, **address** especifica la dirección de inicio dentro del proceso donde debe proyectarse el descriptor. **Normalmente especificaremos nulo, lo que le indica al kernel que elija la dirección de inicio** (en este caso la función de vuelve la dirección asignada). **len** es la cantidad de bytes a proyectar desde el comienzo del archivo desplazado un determinado **offset**. **fd** es el descriptor de archivo a proyectar que una vez proyectado podemos cerrar.
+
+**address** y **offset** deberán estar alineados al límite de páginas, es decir deben ser enteros múltiples del tamaño de página. Si el parámetro **len** no está alineado a página, la proyección se redondea por exceso hasta completar la última página. Los bytes añadidos se rellenan a 0 y cualquier modificación de esos bytes no afectará al almacén subyaccente.
+
+El tipo de protección viene dado por la máscara de bits **prot** y para ello usamos las siguientes constantes:
+
+- PROT_READ: Los datos se pueden leer.
+- PROT_WRITE: Los datos se pueden escribir.
+- PROT_EXEC: Podemos ejecutar los datos.
+- PROT_NONE: No podemos acceder a los datos.
+
+Los valores del argumento **flags** son los siguientes:
+
+- MAP_PRIVATE: Los modificadores de los datos proyectados por el proceso son visibles solo para ese proceso y no modifican el objeto subyacente de la proyección. El uso principal es que múltiples procesos compartan códigos/datos de un ejecutable/biblioteca, de forma que las modificaciones que realicen no se guarden en el archivo.
+- MAP_SHARED: Las modificaciones de los datos de la proyección son visibles a todos los procesos que la compartan y estos cambios modifican el objeto subyacente. Sirve para hacer E/S proyectadas a memoria o para compartir memoria entre procesos.
+- MAP_FIXED: Instruye a mmap() que la dirección address es un requisito, no un consejo. (Ampliar en el enlace de abajo)
+- MAP_ANONYMOUS
+- MAP_LOCKED
+- MAP_NORESERVE
+- MAP_POPULATE
+- MAP_UNITIALIZED
+
+
+Más información aquí: http://manpages.ubuntu.com/manpages/bionic/es/man2/mmap.2.html
+
+Los pasos básicos para realizar la proyección son los siguientes:
+
+- Obtener el descriptor de archivo con los permisos correspondientes (normalmente usando open)
+- Pasar el descriptor de archivo a la llamada map
+
+Para eliminar una proyección utilizamos:
+
+    #include <sys/mman.h>
+
+    int munmap(void *start, size_t length);
+
+El argumento **address** es la dirección que retorno la llamada **mmap()** para esa proyección, y **len** es el tamaño de la región mapeada. Una vez desmapeada, cualquier referencia a la proyección generará la señal **SIGSEGV**. Si una región se declaró como MAP_PRIVATE los cambios que se realizaron serán descartados.
+
+Durante la proyección, el kernel mantiene sincronizada la región mapeada con el archivo suponiendo que se declaró MAP_SHARED. Es decir, si modificamos un dato de la región mapeada, el kernel actualizará en algún instante posterior el archivo. Pero si deseamos que la sincronización sea inmediata debemos utilizar **msync()**
+
+Ventajas de utilizar el mecanismo de proyección de archivos:
+
+- Desde el punto de vista del programador, simplificamos código ya que tras recibir el archivo y establecer el mapeo, no es necesario utilizar **write o read**
+- Es más eficiente sobre todo para archivos grandes. Además una vez creada la proyección no es necesario hacer llamadas al sistema extras.
+- Cuando varios procesos proyectan un mismo objeto en memoria, solo hay una copia de él compartida por todos ellos.
+- La búsqueda de datos en la proyección involucra la manipulación de punteros, por lo que no hay necesidad de utilizar lseek.
+
+Es necesario tener una serie de consideraciones:
+
+- El mapeo de un archivo debe encajar en el espacio de direcciones de un proceso. Con 32 bits, si hacemos numerosos mapeos de diferentes tamaños, fragmentamos el espacio y podemos hacer que sea dificil encontrar una región libre continua.
+- La atomicidad de las operaciones es diferente. En una proyección la atomicidad de una operación viene determinada por la atomicidad de la memoria.
+- La visibilidad de los cambios es diferente. Si dos procesos comparten una proyección, la modificación de datos de la proyección por parte de un proceso es instantáneamente vista por el otro proceso.
+- La diferencia entre el tamaño del archivo proyectado y el número de páginas utilizadas en la proyección es espacio "desperdiciado".
+- No todos los archivos pueden ser proyectados.
+
+Otras funciones relacionadas con la protección de archivos son las siguientes:
+
+    mremap() //Extiende una proyección existente
+    mprotect() //Cambia la protección de una proyección
+    madvise() //Establece consejos sobre como manejar una zona de memoria
+    remap_file_pages() //Permite crear mapeos no lineales es decir mapeos donde las páginas de un archivo aparecen en un orden diferente dentro de la memoria contigua.
+    mlock() // Permite bloquear (anclar) páginas en memoria
+    mincore() //informa sobre las páginas que están actualmente en RAM
+
+**Compartición de memoria**
+
+Una forma de compartir memoria entre un proceso padre y un hijo es invcocar mmap() con MAP_SHARED en el padre antes de invocar a **fork()**. El estándar POSIX garantiza que la proyección creada por el padre se mantiene en el hijo. Es más, los cambios realizados por un proceso son visibles en el otro.
+
+**Proyecciones anónimas**
+
+Una proyección anónima es similar a una proyección de archivo salvo que no existe el correspondiente archivo de respaldo. En su lugar las páginas de la proyección son inicializadas a cero.
+
+Propositos de los diferentes tipos de proyecciones en memoria.
+
+![Propositos](PropositosProyecciones.jpeg)
+
+Las proyecciones anonimas se crean con MAP_ANON y fd = -1 (está en desuso)
+
+**Tamaño de la proyección y del archivo proyectado**
+
+En muchos casos, el tamaño del mapeo es múltiplo del tamaño de página, y cae completamente dentro de los límites del archivo proyectado. En este apartado estudiaremos que ocurre cuando no se cumplen dichas condiciones.
+
+(VER EXPLICACIÓN EN PÁGINA 158 DEL GUIÓN)
+
+
+### Actividad 5
+
+![Ejercicio5](CodigoEjercicio5_S6.jpeg)
+![Ejercicio5](EjecucionEjercicio5_S6.jpeg)
