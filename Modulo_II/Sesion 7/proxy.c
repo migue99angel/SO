@@ -13,55 +13,16 @@
 
 int main(int argc, char **argv)
 {
-    int fd, fd_lock, fd_fifo_s;
+    int fd_lock, fd_fifo_s;
     int pid;
-    char nombrefifoproxy[longnombre];
     char buff[tam];
-    sprintf(nombrefifoproxy,"FIFO.%d",getpid());
     FILE *temporal;
     struct flock cerrojo;
-
-    if(argc != 2)
-    {
-        printf("Proxy: Error en la llamada al proxy, ./proxy <fd_fifos>\n");
-        return EXIT_FAILURE;
-    }
-    else
-    {
-        fd_fifo_s = atoi(argv[1]);
-    }
-    
-
-    //Primero creamos el FIFO que servirá para comunicar el cliente con el proxy
-    umask(0);
-    int err_fifo = mknod(nombrefifoproxy,S_IFIFO|0777, 0);
-    if( err_fifo < 0) 
-    {
-        perror("\nProxy: Error al crear el FIFO");
-        return EXIT_FAILURE;
-    }
-
-    //Escribimos en el FIFOs nuestro pid para que un cliente escriba sus trabajos en el FIFO.pid que acabamos de crear 
-    pid = getpid();
-    if((write(fd_fifo_s,&pid,sizeof(int))) < 0) 
-    {
-        perror ("Proxy: Error en la escritura en el FIFO conocido de salida");
-        exit(EXIT_FAILURE);
-    }
+    char nombrefifoproxy[longnombre];
+    sprintf(nombrefifoproxy,"FIFO.%d",getpid());
 
     //Creamos el archivo temporal que servirá para almacenar la información que el cliente quiere imprimir
     temporal = tmpfile();
-
-    //Ahora abrimos el FIFO
-    if ((fd = open (nombrefifoproxy, O_RDONLY)) < 0) 
-	{
-        printf("Proxy: Error al abrir el fichero FIFO.pid ");
-		perror ("Proxy: Error al abrir el FIFO");
-		exit(EXIT_FAILURE);
-	}
-
-    //Redireccionamos la entrada del proceso proxy al fichero FIFO
-    dup2(fd,STDIN_FILENO);
 
     //Abrimos el archivo de bloqueo para que los procesos proxy puedan acceder a la impresora en exclusión mútua
     fd_lock = open("lockfile", 0666);
@@ -71,12 +32,11 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);		
     }
 
-
     int bytesLeidos = 1024;
     int bytesEscritos = 0;
     while(bytesLeidos > 0)
     {
-        bytesLeidos =  read(fd,buff,tam);
+        bytesLeidos =  read(STDIN_FILENO,buff,tam);
         if(bytesLeidos > 0)
         {   
             bytesEscritos = fwrite(buff,sizeof(char),bytesLeidos,temporal);
@@ -86,6 +46,7 @@ int main(int argc, char **argv)
                 perror ("Proxy: Error al escribir en el archivo temporal");
                 exit(EXIT_FAILURE);
             }
+
         }
 
     } 
@@ -132,6 +93,8 @@ int main(int argc, char **argv)
                 }
 
             } while (bytesLeidos > 0);
+
+            write(STDOUT_FILENO,"\n\n",sizeof(char)*3);   //Ponemos un salto de línea después de cada trabajo
             
             error = fcntl(fd_lock,F_SETLKW,&cerrojo);   //Desbloqueamos el lockfile
             if(error != 0)

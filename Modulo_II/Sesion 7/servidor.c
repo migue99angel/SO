@@ -21,6 +21,11 @@ static void manejador_signal(int sigNum)
 
         recibeSignal = 0;
 
+    } else if (sigNum == SIGCHLD)
+    {
+        int estado;
+        //Esperamos para evitar que se queden procesos zombies
+        while (wait(&estado)!=-1);
     }
 
 }
@@ -33,7 +38,6 @@ int main(int argc, char **argv)
     int fd_lock,fd_e, fd_s;
     int bytesLeidos;
     int pidLeido;
-    int estado;
     int PID;
     char nombrefifoe[longnombre], nombrefifos[longnombre];
     char arg1[4];
@@ -116,7 +120,7 @@ int main(int argc, char **argv)
     /***********************************************************************/
        
 
-        while(bytesLeidos =  read(fd_e,&pidLeido,sizeof(int))  >=0 || recibeSignal ==1)
+        while(bytesLeidos =  read(fd_e,&pidLeido,sizeof(int))  >=0 || recibeSignal == 1)
         {
             if(pidLeido > 0)
             {
@@ -130,9 +134,43 @@ int main(int argc, char **argv)
 
                 if(PID == 0)    //Proceso hijo
                 {
+                    int fd;
+                    char nombrefifoproxy[longnombre];
+
+                    if(setvbuf(stdout,NULL,_IONBF,0))
+                        perror("\nError en setvbuf");
+
+                    sprintf(nombrefifoproxy,"FIFO.%d",getpid());
+                    //Primero creamos el FIFO que servirá para comunicar el cliente con el proxy
+                    int err_fifo = mknod(nombrefifoproxy,S_IFIFO|0777, 0);
+                    if( err_fifo < 0) 
+                    {
+                        perror("\nProxy: Error al crear el FIFO");
+                        return EXIT_FAILURE;
+                    }
+
+                    //Escribimos en el FIFOs nuestro pid para que un cliente escriba sus trabajos en el FIFO.pid que acabamos de crear 
+                    int pid = getpid();
+                    if((write(fd_s,&pid,sizeof(int))) < 0) 
+                    {
+                        perror ("Proxy: Error en la escritura en el FIFO conocido de salida");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    //Ahora abrimos el FIFO
+                    if ((fd = open (nombrefifoproxy, O_RDONLY)) < 0) 
+                    {
+                        printf("Proxy: Error al abrir el fichero FIFO.pid ");
+                        perror ("Proxy: Error al abrir el FIFO");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    //Redireccionamos la entrada del proceso proxy al fichero FIFO
+                    dup2(fd,STDIN_FILENO);
+
 
                     //Lanzo el proxy
-                    if((execl("./proxy","proxy",arg1,NULL)) < 0 )
+                    if((execl("./proxy","proxy",NULL)) < 0 )
                     {
                         perror("\nServidor: Error en el execl para lanzar el proxy");
                         printf("\nServidor: Error %d en execl",errno);	
@@ -169,9 +207,6 @@ int main(int argc, char **argv)
             perror ("Servidor: Error al eliminar el FIFO de salida");
             exit(EXIT_FAILURE);
         }
-
-        // El proceso servidor elimina zombies ya que es el padre.
-        while ( (wait(&estado)) !=-1);
 
 
 
