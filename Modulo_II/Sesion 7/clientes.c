@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #define tamano 1024
 #define longnombre 50

@@ -1,6 +1,9 @@
 #!/bin/bash
 	rm FIFO*
 	rm lockfile
+	rm servidor
+    rm clientes
+    rm proxy
 	gcc clientes.c -o clientes
 	gcc proxy.c -o proxy
 	gcc servidor.c -o servidor

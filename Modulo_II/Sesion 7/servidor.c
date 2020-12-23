@@ -7,16 +7,37 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <signal.h>
 #define longnombre 50
+
+int recibeSignal = 1;
+
+static void manejador_signal(int sigNum)
+{
+    if(sigNum == SIGINT)
+    {
+        printf("\nRecibida la senal de finalización\n\n");
+
+        recibeSignal = 0;
+
+    }
+
+}
+        
+
+
 
 int main(int argc, char **argv)
 {
     int fd_lock,fd_e, fd_s;
     int bytesLeidos;
     int pidLeido;
+    int estado;
     int PID;
     char nombrefifoe[longnombre], nombrefifos[longnombre];
     char arg1[4];
+    struct sigaction sig_USR_nact;
 
     // Compone los nombres de los FIFOs conocidos a partir del parametro,
 	// uno de entrada y otro de salida (desde el punto de vista del servidor).
@@ -72,10 +93,30 @@ int main(int argc, char **argv)
 
     printf("Servidor: Los archivos FIFO han sido creados y abiertos correctamente\n");
 
+
+    //Inicializar la estructura sig_USR_na para especificar la nueva acción para la señal.
+
+    sig_USR_nact.sa_handler = manejador_signal;
+
+
+    //'sigemptyset' inicia el conjunto de señales dado al conjunto vacio. 
+
+    sigemptyset (&sig_USR_nact.sa_mask);
+    sig_USR_nact.sa_flags = 0;
+
+    //Establecer mi manejador particular de señal para SIGINT
+    if( sigaction(SIGINT,&sig_USR_nact,NULL) <0) 
+    {
+        perror("\nError al intentar establecer el manejador de senal para SIGUSR1");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Servidor: El manejador para la señal de finalización por teclado se ha establecido correctamente\n");
+
     /***********************************************************************/
        
 
-        while(bytesLeidos =  read(fd_e,&pidLeido,sizeof(int))  >=0 )
+        while(bytesLeidos =  read(fd_e,&pidLeido,sizeof(int))  >=0 || recibeSignal ==1)
         {
             if(pidLeido > 0)
             {
@@ -111,19 +152,28 @@ int main(int argc, char **argv)
         }
 
     /*********************************************************************/
+        if((unlink(nombrefifoe)) < 0)
+        {
+            perror ("Servidor: Error al eliminar el FIFO de entrada");
+            exit(EXIT_FAILURE);
+        }
+
+        if((unlink(nombrefifos)) < 0)
+        {
+            perror ("Servidor: Error al eliminar el FIFO de salida");
+            exit(EXIT_FAILURE);
+        }
+
+        if((unlink("lockfile")) < 0)
+        {
+            perror ("Servidor: Error al eliminar el FIFO de salida");
+            exit(EXIT_FAILURE);
+        }
+
+        // El proceso servidor elimina zombies ya que es el padre.
+        while ( (wait(&estado)) !=-1);
 
 
-    if((unlink(nombrefifoe)) < 0)
-    {
-        perror ("Servidor: Error al eliminar el FIFO de entrada");
-		exit(EXIT_FAILURE);
-    }
-
-    if((unlink(nombrefifos)) < 0)
-    {
-        perror ("Servidor: Error al eliminar el FIFO de salida");
-		exit(EXIT_FAILURE);
-    }
 
     return EXIT_SUCCESS;
 }
